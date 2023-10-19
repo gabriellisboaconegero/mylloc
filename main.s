@@ -34,8 +34,9 @@ iniciaAlocador:
 #     long int tam = base+8
 #     void *data = base+16
 # }
-# tam = %rdi = -16(%rbp)
 # novo_nodo = -8(%rbp)
+# tam = %rdi = -16(%rbp)
+# aux = %rax
 alocaMem:
     pushq %rbp
     movq %rsp, %rbp
@@ -48,9 +49,38 @@ alocaMem:
     cmpq %rax, %rbx
     je increase_brk
     # Nao vazio
-    movq (%rax), %rbx
-    
+    # Pegar o nodo vazio, sem splitar ele
+
+while:
+    movq (%rax), %rbx   # aux.alocado
+    cmpq $ALOCADO, %rbx
+    je prox_nodo
+
+    movq %rax, %rcx     # aux->tam < tam
+    addq $8, %rcx 
+    movq (%rcx), %rbx
+    movq -8(%rbp), %rdx
+    cmpq %rdx, %rbx
+    jl prox_nodo
+
+    # aux.alocado = 1, aux.tam = tam
+    movq $ALOCADO, (%rax)
+    movq %rdx, (%rcx)
+    addq $16, %rax  # return aux.data
     jmp end
+
+prox_nodo:
+    # aux+aux->tam+16
+    movq %rax, %rdx
+    addq $8, %rdx
+    movq (%rdx), %rdx
+    addq $16, %rdx
+    addq %rdx, %rax
+
+    # aux >= TopoHeap
+    movq TopoHeap, %rbx
+    cmpq %rbx, %rax
+    jl while
 
 increase_brk:
     # mem vazia
@@ -73,11 +103,9 @@ novo_nodo:
     movq %rbx, (%rax)
 
     addq $8, %rax # return novo_nodo.data
-
-    jmp end
 end:
-    popq %rbp
     addq $16, %rsp
+    popq %rbp
     ret
 
 finalizaAlocador:

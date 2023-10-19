@@ -11,9 +11,12 @@ int main(){
     printf("brk = 0x%lx\n", sbrk(0));
     fflush(stdout);
     iniciaAlocador();
-    alocaMem(100);
     printf("TopoHeap: %lx\n", TopoHeap);
-    alocaMem(100);
+    void *a = alocaMem(100);
+    printf("a: %lx\n", a);
+    printf("TopoHeap: %lx\n", TopoHeap);
+    void *b = alocaMem(100);
+    printf("b: %lx\n", b);
     printf("TopoHeap: %lx\n", TopoHeap);
     finalizaAlocador();
     printf("Finalizando programa: brk = 0x%lx\n", sbrk(0));
