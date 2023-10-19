@@ -3,17 +3,121 @@
 .globl TopoHeap
     TopoInicialHeap: .quad 0
     TopoHeap: .quad 0
+    NODO_MSG: .string "addr %ld(0x%lx) aloc: %ld tam: 0x%lx\n"
+    GEREN_STR: .string "####"
+    ALOC_CHAR: .byte '+'
+    LIVRE_CHAR: .byte '-'
+    NL: .byte '\n'
 
 # Constantes
 .equ ALOCADO,  1
 .equ LIBERADO, 0
 .equ BRK_SERVICE, 12
+.equ WRITE_SERVICE, 1
 .equ GET_BRK,  0
+.equ STDOUT, 1
+.equ GEREN_SIZE, 4
 
 .section .text
 .globl iniciaAlocador
 .globl finalizaAlocador
 .globl alocaMem
+.globl liberaMem
+.globl listaNodos
+# cont = -8(%rbp)
+# aux = -16(%rbp)
+# write_char = -24(%rbp)
+listaNodos:
+    pushq %rbp
+    movq %rsp, %rbp
+    subq $24, %rsp
+    movq $0, -8(%rbp)
+
+    movq TopoInicialHeap, %rax
+    movq %rax, -16(%rbp)
+while2:
+    # aux >= TopoHeap
+    movq TopoHeap, %rbx
+    cmpq %rbx, %rax
+    jge fim_while2
+    # movq $NODO_MSG, %rdi
+    # movq -8(%rbp), %rsi
+    # movq %rax, %rdx
+    # movq (%rax), %rcx
+    # addq $8, %rax
+    # movq (%rax), %r8
+    # call printf
+
+    # write "####"
+    movq $WRITE_SERVICE, %rax
+    movq $STDOUT, %rdi
+    movq $GEREN_STR, %rsi
+    movq $GEREN_SIZE, %rdx
+    syscall
+
+    # rdi = aux.tam
+    movq -16(%rbp), %rdi
+    addq  $8, %rdi
+    movq (%rdi), %rdi
+
+    # write_char = aux.alocado ? "+" : "-"
+    movq -16(%rbp), %rax
+    movq (%rax), %rcx
+    cmpq $ALOCADO, %rcx
+    je print_alocado
+    movq $LIVRE_CHAR, %r8
+    movq %r8, -24(%rbp)
+    jmp loop
+print_alocado:
+    movq $ALOC_CHAR, %r8
+    movq %r8, -24(%rbp)
+
+loop:
+    # tam <= 0
+    cmpq $0, %rdi
+    jle fim_loop
+
+    # write(write_char)
+    pushq %rdi
+    movq $WRITE_SERVICE, %rax
+    movq $STDOUT, %rdi
+    movq -24(%rbp), %rsi
+    movq $1, %rdx
+    syscall
+    popq %rdi
+
+    # tam--
+    subq $1, %rdi
+    jmp loop
+
+fim_loop:
+    movq -8(%rbp), %rcx # cont++
+    addq $1, %rcx
+    movq %rcx, -8(%rbp)
+
+    # aux = aux+aux->tam+16
+    movq -16(%rbp), %rdx
+    movq %rdx, %rax
+    addq $8, %rdx
+    movq (%rdx), %rdx
+    addq $16, %rdx
+    addq %rdx, %rax
+    movq %rax, -16(%rbp)
+
+    jmp while2
+fim_while2:
+
+    movq $WRITE_SERVICE, %rax
+    movq $STDOUT, %rdi
+    movq $NL, %rsi
+    movq $1, %rdx
+    syscall
+
+    movq -8(%rbp), %rax # return cont
+    addq $24, %rsp
+    popq %rbp
+    ret
+
 iniciaAlocador:
     pushq %rbp
     movq %rsp, %rbp
@@ -37,6 +141,7 @@ iniciaAlocador:
 # novo_nodo = -8(%rbp)
 # tam = %rdi = -16(%rbp)
 # aux = %rax
+# TODO: Fazer o prox_nodoo antes do while
 alocaMem:
     pushq %rbp
     movq %rsp, %rbp
@@ -45,29 +150,38 @@ alocaMem:
 
     # TopoInicialHeap == TopoHeap
     movq TopoInicialHeap, %rax
+    movq %rax, -8(%rbp)    # novo_nodo = TopoInicialHeap
     movq TopoHeap, %rbx
     cmpq %rax, %rbx
     je increase_brk
-    # Nao vazio
-    # Pegar o nodo vazio, sem splitar ele
 
+    # Nao vazio
 while:
     movq (%rax), %rbx   # aux.alocado
     cmpq $ALOCADO, %rbx
     je prox_nodo
 
-    movq %rax, %rcx     # aux->tam < tam
+    movq %rax, %rcx
     addq $8, %rcx 
     movq (%rcx), %rbx
-    movq -8(%rbp), %rdx
-    cmpq %rdx, %rbx
-    jl prox_nodo
+    movq -16(%rbp), %rdx
+    subq %rdx, %rbx
+    jz novo_nodo    # aux.tam == tam -> aux.tam - tam == 0
+    subq $16, %rbx  # next_tam
+    jl prox_nodo    # aux.tam-16 < tam -> aux.tam-16-tam < 0
+    # Se tiver espaço fazer split do nodo
+    # Ou seja, apenas criar um novo nodo na frente de
+    # aux, com tamaho aux->tam-16-tam. E depois chamar
+    # novo_nodo para colocar os valores certos no nodo alocado
+    addq $8, %rcx   # next_nodo
+    addq %rdx, %rcx
 
-    # aux.alocado = 1, aux.tam = tam
-    movq $ALOCADO, (%rax)
-    movq %rdx, (%rcx)
-    addq $16, %rax  # return aux.data
-    jmp end
+    movq $LIBERADO, (%rcx)  # next_nodo.alocado = 0
+
+    addq $8, %rcx   # net_nodo.tam = next_tam
+    movq %rbx, (%rcx)
+
+    jmp novo_nodo   # Alocao novo nodo
 
 prox_nodo:
     # aux+aux->tam+16
@@ -76,6 +190,7 @@ prox_nodo:
     movq (%rdx), %rdx
     addq $16, %rdx
     addq %rdx, %rax
+    movq %rax, -8(%rbp) # nodo_novo = aux
 
     # aux >= TopoHeap
     movq TopoHeap, %rbx
@@ -105,6 +220,18 @@ novo_nodo:
     addq $8, %rax # return novo_nodo.data
 end:
     addq $16, %rsp
+    popq %rbp
+    ret
+
+# addr = %rdi
+liberaMem:
+    pushq %rbp
+    movq %rsp, %rbp
+
+    # TODO: Verificar se addr é valido
+    subq $16, %rdi
+    movq $LIBERADO, (%rdi)
+
     popq %rbp
     ret
 

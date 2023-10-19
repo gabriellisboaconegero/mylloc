@@ -9,11 +9,12 @@ FILES.CS.O = $(FILES.C:%.c=%.cs.o)
 all: $(FILES.S.O) $(FILES.C.O)
 	ld $^ -o $(PROGRAM) $(LDLIBC)
 
+debug: ASFLAGS = -g
 debug: $(FILES.S.O) $(FILES.CS.O)
 	ld $^ -o $(PROGRAM) $(LDLIBC)
 
 %.o: %.s
-	as $< -o $@
+	as $< -o $@ $(ASFLAGS)
 
 %.o: %.c
 	gcc -c $< -o $@
