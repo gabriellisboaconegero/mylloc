@@ -24,13 +24,16 @@ int main(){
     liberaMem(a[4]);
     liberaMem(a[1]);
     liberaMem(a[0]);
-    listaNodos();
     for (int i = 7; i < TAM; i++){
         a[i] = alocaMem(20);
         printf("addr %d: 0x%lx\n", i, a[i]);
     }
+    listaNodos();
     liberaMem(a[7]);
     liberaMem(a[9]);
+    listaNodos();
+    a[7] = alocaMem(112);
+    a[9] = alocaMem(20);
     printf("Nodos: %ld\n", listaNodos());
 
     finalizaAlocador();

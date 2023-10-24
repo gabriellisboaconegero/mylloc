@@ -1,6 +1,7 @@
 .section .data
 .globl TopoInicialHeap
 .globl TopoHeap
+# ------------------- Variaveis -------------------
     TopoInicialHeap: .quad 0
     TopoHeap: .quad 0
     NODO_MSG: .string "addr %ld(0x%lx) aloc: %ld tam: 0x%lx\n"
@@ -8,8 +9,9 @@
     ALOC_CHAR: .byte '+'
     LIVRE_CHAR: .byte '-'
     NL: .byte '\n'
+# ------------------- Variaveis -------------------
 
-# Constantes
+# ------------------- Constantes -------------------
 .equ ALOCADO,  1
 .equ LIBERADO, 0
 .equ BRK_SERVICE, 12
@@ -17,13 +19,18 @@
 .equ GET_BRK,  0
 .equ STDOUT, 1
 .equ GEREN_SIZE, 4
+# ------------------- Constantes -------------------
 
 .section .text
+# ------------------- Funções globais -------------------
 .globl iniciaAlocador
 .globl finalizaAlocador
 .globl alocaMem
 .globl liberaMem
 .globl listaNodos
+# ------------------- Funções globais -------------------
+
+# ------------------- ListaNodos -------------------
 # cont = -8(%rbp)
 # aux = -16(%rbp)
 # write_char = -24(%rbp)
@@ -107,6 +114,7 @@ fim_loop:
     jmp while2
 fim_while2:
 
+    # Escreve fim da linha
     movq $WRITE_SERVICE, %rax
     movq $STDOUT, %rdi
     movq $NL, %rsi
@@ -117,7 +125,9 @@ fim_while2:
     addq $24, %rsp
     popq %rbp
     ret
+# ------------------- ListaNodos -------------------
 
+# ------------------- IniciaAlocador -------------------
 iniciaAlocador:
     pushq %rbp
     movq %rsp, %rbp
@@ -127,12 +137,15 @@ iniciaAlocador:
     movq $GET_BRK, %rdi
     syscall
 
+    # Inicia var globais
     movq %rax, TopoInicialHeap
     movq %rax, TopoHeap
 
     popq %rbp
     ret
+# ------------------- IniciaAlocador -------------------
 
+# ------------------- AlocaMem -------------------
 # struct nodo {
 #     long int alocado = base+0
 #     long int tam = base+8
@@ -222,7 +235,9 @@ end:
     addq $16, %rsp
     popq %rbp
     ret
+# ------------------- AlocaMem -------------------
 
+# ------------------- LiberaMem -------------------
 # addr = %rdi
 liberaMem:
     pushq %rbp
@@ -234,18 +249,20 @@ liberaMem:
 
     popq %rbp
     ret
+# ------------------- LiberaMem -------------------
 
+# ------------------- FinalizaAlocador -------------------
 finalizaAlocador:
     pushq %rbp
     movq %rsp, %rbp
 
     # Limpa toda a memória alocada.
-    # fazer verificação se teve leak de memoria??
     movq $BRK_SERVICE, %rax
     movq TopoInicialHeap, %rdi
-    # Segurança :)
+    # limpar TopoHeap por Segurança :)
     movq %rdi, TopoHeap
     syscall
 
     popq %rbp
     ret
+# ------------------- FinalizaAlocador -------------------
