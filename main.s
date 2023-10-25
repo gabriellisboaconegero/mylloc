@@ -236,6 +236,7 @@ while:
     movq %r8, %rax
 
 fim_fusao:
+    movq %rax, -8(%rbp)
 
     # aux.tam == tam -> aux.tam - tam == 0
     movq %rax, %rcx
