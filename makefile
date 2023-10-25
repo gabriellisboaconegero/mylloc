@@ -9,6 +9,12 @@ FILES.CS.O = $(FILES.C:%.c=%.cs.o)
 all: $(FILES.S.O) $(FILES.C.O)
 	ld $^ -o $(PROGRAM) $(LDLIBC)
 
+arch: LDLIBC = -dynamic-linker /lib/ld-linux-x86-64.so.2 /usr/lib/crt1.o /usr/lib/crti.o /usr/lib/crtn.o -lc
+arch: all
+
+debug_arch: LDLIBC = -dynamic-linker /lib/ld-linux-x86-64.so.2 /usr/lib/crt1.o /usr/lib/crti.o /usr/lib/crtn.o -lc
+debug_arch: debug
+
 debug: ASFLAGS = -g
 debug: $(FILES.S.O) $(FILES.CS.O)
 	ld $^ -o $(PROGRAM) $(LDLIBC)

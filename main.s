@@ -47,13 +47,6 @@ while2:
     movq TopoHeap, %rbx
     cmpq %rbx, %rax
     jge fim_while2
-    # movq $NODO_MSG, %rdi
-    # movq -8(%rbp), %rsi
-    # movq %rax, %rdx
-    # movq (%rax), %rcx
-    # addq $8, %rax
-    # movq (%rax), %r8
-    # call printf
 
     # write "####"
     movq $WRITE_SERVICE, %rax
@@ -71,11 +64,11 @@ while2:
     movq -16(%rbp), %rax
     movq (%rax), %rcx
     cmpq $ALOCADO, %rcx
-    je print_alocado
+    je char_alocado
     movq $LIVRE_CHAR, %r8
     movq %r8, -24(%rbp)
     jmp loop
-print_alocado:
+char_alocado:
     movq $ALOC_CHAR, %r8
     movq %r8, -24(%rbp)
 
@@ -153,50 +146,128 @@ iniciaAlocador:
 # }
 # novo_nodo = -8(%rbp)
 # tam = %rdi = -16(%rbp)
+# prev = %r8 = -24(%rbp)
 # aux = %rax
 # TODO: Fazer o prox_nodoo antes do while
 alocaMem:
     pushq %rbp
     movq %rsp, %rbp
-    subq $16, %rsp
+    subq $24, %rsp
     movq %rdi, -16(%rbp)   # tam = parametro tam
 
     # TopoInicialHeap == TopoHeap
     movq TopoInicialHeap, %rax
-    movq %rax, -8(%rbp)    # novo_nodo = TopoInicialHeap
     movq TopoHeap, %rbx
     cmpq %rax, %rbx
     je increase_brk
 
+    # novo_nodo = TopoInicialHeap
+    movq %rax, -8(%rbp)
     # Nao vazio
-while:
-    movq (%rax), %rbx   # aux.alocado
+    # -------------- PRIMEIRA ITERAÇÃO, NÃO FUNDE NODOS ---------------
+    # prev = TopoInicialHeap
+    movq %rax, %r8
+    movq %r8, -24(%rbp)
+
+    # aux.alocado
+    movq (%rax), %rbx
     cmpq $ALOCADO, %rbx
     je prox_nodo
 
+    # aux.tam == tam -> aux.tam - tam == 0
     movq %rax, %rcx
     addq $8, %rcx 
     movq (%rcx), %rbx
     movq -16(%rbp), %rdx
     subq %rdx, %rbx
-    jz novo_nodo    # aux.tam == tam -> aux.tam - tam == 0
-    subq $16, %rbx  # next_tam
-    jl prox_nodo    # aux.tam-16 < tam -> aux.tam-16-tam < 0
-    # Se tiver espaço fazer split do nodo
-    # Ou seja, apenas criar um novo nodo na frente de
-    # aux, com tamaho aux->tam-16-tam. E depois chamar
-    # novo_nodo para colocar os valores certos no nodo alocado
-    addq $8, %rcx   # next_nodo
+    jz novo_nodo
+
+    # aux.tam-16 < tam -> aux.tam-16 - tam < 0
+    subq $16, %rbx
+    jl prox_nodo
+
+    # auxtam >= tam -> aux.tam-16 - tam >= 0
+    # rcx = aux+16+tam
+    movq %rax, %rcx
+    addq $16, %rcx
     addq %rdx, %rcx
 
-    movq $LIBERADO, (%rcx)  # next_nodo.alocado = 0
+    # next_nodo.alocado = 0
+    movq $LIBERADO, (%rcx)
 
-    addq $8, %rcx   # net_nodo.tam = next_tam
+    # next_nodo.tam = next_tam
+    addq $8, %rcx
     movq %rbx, (%rcx)
 
-    jmp novo_nodo   # Alocao novo nodo
+    jmp novo_nodo
+    # -------------- PRIMEIRA ITERAÇÃO, NÃO FUNDE NODOS ---------------
+
+while:
+    # aux.alocado
+    movq (%rax), %rbx
+    cmpq $ALOCADO, %rbx
+    je prox_nodo
+    
+    # if (!prev.alocado){
+    #   prev.tam = prev.tam + 16 + aux.tam
+    #   aux = prev
+    # }
+    movq -24(%rbp), %r8
+    movq (%r8), %r9
+    cmpq $LIBERADO, %r9
+    jne fim_fusao
+
+    # r10 = prev.tam+16
+    movq %r8, %r9
+    addq $8, %r9
+    movq (%r9), %r10
+    addq $16, %r10
+
+    # r11 = aux.tam
+    movq %rax, %r11
+    addq $8, %r11
+    movq (%r11), %r11
+
+    # r11 = prev.tam + 16 + aux.tam
+    addq %r10, %r11
+    movq %r11, (%r9)
+
+    # aux = prev
+    movq %r8, %rax
+
+fim_fusao:
+
+    # aux.tam == tam -> aux.tam - tam == 0
+    movq %rax, %rcx
+    addq $8, %rcx 
+    movq (%rcx), %rbx
+    movq -16(%rbp), %rdx
+    subq %rdx, %rbx
+    jz novo_nodo
+
+    # aux.tam-16 < tam -> aux.tam-16 - tam < 0
+    subq $16, %rbx
+    jl prox_nodo
+
+    # auxtam >= tam -> aux.tam-16 - tam >= 0
+    # rcx = aux+16+tam
+    movq %rax, %rcx
+    addq $16, %rcx
+    addq %rdx, %rcx
+
+    # next_nodo.alocado = 0
+    movq $LIBERADO, (%rcx)
+
+    # next_nodo.tam = next_tam
+    addq $8, %rcx
+    movq %rbx, (%rcx)
+
+    jmp novo_nodo
 
 prox_nodo:
+    # prev = aux
+    movq %rax, -24(%rbp)
+
     # aux+aux->tam+16
     movq %rax, %rdx
     addq $8, %rdx
@@ -222,6 +293,7 @@ increase_brk:
     movq $BRK_SERVICE, %rax
     syscall
 
+# requer que novo_nodo {-8(%rbp)} esteja iniciado
 novo_nodo:
     movq -8(%rbp), %rax # novo_nodo.alocado = 1
     movq $ALOCADO, (%rax)
@@ -232,7 +304,7 @@ novo_nodo:
 
     addq $8, %rax # return novo_nodo.data
 end:
-    addq $16, %rsp
+    addq $24, %rsp
     popq %rbp
     ret
 # ------------------- AlocaMem -------------------
