@@ -5,7 +5,7 @@
     TopoInicialHeap: .quad 0
     TopoHeap: .quad 0
     NODO_MSG: .string "addr %ld(0x%lx) aloc: %ld tam: 0x%lx\n"
-    GEREN_STR: .string "####"
+    GEREN_STR: .string "################"
     ALOC_CHAR: .byte '+'
     LIVRE_CHAR: .byte '-'
     NL: .byte '\n'
@@ -18,7 +18,7 @@
 .equ WRITE_SERVICE, 1
 .equ GET_BRK,  0
 .equ STDOUT, 1
-.equ GEREN_SIZE, 4
+.equ GEREN_SIZE, 16
 # ------------------- Constantes -------------------
 
 .section .text
@@ -48,49 +48,51 @@ while2:
     cmpq %rbx, %rax
     jge fim_while2
 
-    # write "####"
+    # write "################"
     movq $WRITE_SERVICE, %rax
     movq $STDOUT, %rdi
     movq $GEREN_STR, %rsi
     movq $GEREN_SIZE, %rdx
     syscall
 
-    # rdi = aux.tam
-    movq -16(%rbp), %rdi
-    addq  $8, %rdi
-    movq (%rdi), %rdi
-
     # write_char = aux.alocado ? "+" : "-"
     movq -16(%rbp), %rax
     movq (%rax), %rcx
     cmpq $ALOCADO, %rcx
-    je char_alocado
+    je alocado_select
+
+livre_select:
     movq $LIVRE_CHAR, %r8
-    movq %r8, -24(%rbp)
-    jmp loop
-char_alocado:
+    jmp fim_select
+alocado_select:
     movq $ALOC_CHAR, %r8
+
+fim_select:
     movq %r8, -24(%rbp)
 
-loop:
+    # rdi = aux.tam
+    movq -16(%rbp), %rdi
+    addq  $8, %rdi
+    movq (%rdi), %rdi
+print_aloc_state_loop:
     # tam <= 0
     cmpq $0, %rdi
-    jle fim_loop
+    jle fim_print_aloc_state_loop
 
     # write(write_char)
-    pushq %rdi
+    pushq %rdi  # Salva %rdi
     movq $WRITE_SERVICE, %rax
     movq $STDOUT, %rdi
     movq -24(%rbp), %rsi
     movq $1, %rdx
     syscall
-    popq %rdi
+    popq %rdi   # Restaura rdi
 
     # tam--
     subq $1, %rdi
-    jmp loop
+    jmp print_aloc_state_loop
 
-fim_loop:
+fim_print_aloc_state_loop:
     movq -8(%rbp), %rcx # cont++
     addq $1, %rcx
     movq %rcx, -8(%rbp)
