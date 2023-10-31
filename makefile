@@ -1,10 +1,17 @@
 PROGRAM = main
+SRCD=src
+INCLUDED=include
+TESTED=teste
+OBJD=obj
+
 LDLIBC = -dynamic-linker /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 /usr/lib/x86_64-linux-gnu/crt1.o /usr/lib/x86_64-linux-gnu/crti.o /usr/lib/x86_64-linux-gnu/crtn.o -lc
-FILES.S = $(wildcard *.s)
-FILES.C = $(wildcard *.c)
-FILES.S.O = $(FILES.S:%.s=%.o)
-FILES.C.O = $(FILES.C:%.c=%.o)
-FILES.CS.O = $(FILES.C:%.c=%.cs.o)
+CFLAGS= -Wall -I$(INCLUDED)
+
+FILES.S = $(wildcard $(SRCD)/*.s)
+FILES.C = $(wildcard $(TESTED)/*.c)
+FILES.S.O = $(FILES.S:$(SRCD)/%.s=$(OBJD)/%.o)
+FILES.C.O = $(FILES.C:$(TESTED)/%.c=$(OBJD)/%.o)
+FILES.CS.O = $(FILES.C:$(TESTED)/%.c=$(OBJD)/%.cs.o)
 
 all: $(FILES.S.O) $(FILES.C.O)
 	ld $^ -o $(PROGRAM) $(LDLIBC)
@@ -19,16 +26,19 @@ debug: ASFLAGS = -g
 debug: $(FILES.S.O) $(FILES.CS.O)
 	ld $^ -o $(PROGRAM) $(LDLIBC)
 
-%.o: %.s
+$(OBJD):
+	mkdir -p $(OBJD)
+
+$(OBJD)/%.o: $(SRCD)/%.s $(INCLUDED)/%.h $(OBJD)
 	as $< -o $@ $(ASFLAGS)
 
-%.o: %.c
-	gcc -c $< -o $@
+$(OBJD)/%.o: $(TESTED)/%.c $(OBJD)
+	gcc $(CFLAGS) -c $< -o $@
 
-%.cs.o: %.c
-	gcc -S $< -o $<s
+$(OBJD)/%.cs.o: $(TESTED)/%.c $(OBJD)
+	gcc -S $(CFLAGS) $< -o $<s
 	as $<s -o $@ -g
 
 clean:
-	rm -f *.o *.cs $(PROGRAM)
+	rm -rf $(OBJD) $(TESTED)/*.cs $(PROGRAM)
 

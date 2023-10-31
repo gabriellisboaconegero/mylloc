@@ -4,7 +4,6 @@
 # ------------------- Variaveis -------------------
     TopoInicialHeap: .quad 0
     TopoHeap: .quad 0
-    NODO_MSG: .string "addr %ld(0x%lx) aloc: %ld tam: 0x%lx\n"
     GEREN_STR: .string "################"
     ALOC_CHAR: .byte '+'
     LIVRE_CHAR: .byte '-'
@@ -127,6 +126,11 @@ iniciaAlocador:
     pushq %rbp
     movq %rsp, %rbp
 
+    # verifica se ja iniciou
+    movq TopoHeap, %rax
+    cmpq $0, %rax
+    jne end_iniciaAlocador
+
     # Get brk topo
     movq $BRK_SERVICE, %rax
     movq $GET_BRK, %rdi
@@ -136,6 +140,7 @@ iniciaAlocador:
     movq %rax, TopoInicialHeap
     movq %rax, TopoHeap
 
+end_iniciaAlocador:
     popq %rbp
     ret
 # ------------------- IniciaAlocador -------------------
@@ -150,7 +155,7 @@ iniciaAlocador:
 # tam = %rdi = -16(%rbp)
 # prev = %r8 = -24(%rbp)
 # aux = %rax
-# TODO: Fazer o prox_nodoo antes do while
+# TODO: Fazer o prox_nodo antes do while
 alocaMem:
     pushq %rbp
     movq %rsp, %rbp
@@ -165,18 +170,19 @@ alocaMem:
 
     # novo_nodo = TopoInicialHeap
     movq %rax, -8(%rbp)
-    # Nao vazio
-    # -------------- PRIMEIRA ITERAÇÃO, NÃO FUNDE NODOS ---------------
+# -------------- PRIMEIRA ITERAÇÃO, NÃO FUNDE NODOS ---------------
     # prev = TopoInicialHeap
     movq %rax, %r8
     movq %r8, -24(%rbp)
 
-    # aux.alocado
+    # if aux.alocado goto prox_nodo
     movq (%rax), %rbx
     cmpq $ALOCADO, %rbx
     je prox_nodo
 
+    # ESPAÇO IGUAL AO REQUESITADO
     # aux.tam == tam -> aux.tam - tam == 0
+    # if aux.tam == tam goto novo_nodo
     movq %rax, %rcx
     addq $8, %rcx 
     movq (%rcx), %rbx
@@ -184,11 +190,17 @@ alocaMem:
     subq %rdx, %rbx
     jz novo_nodo
 
+    # ESPACO MENOR QUE O REQUESITADO + 16
     # aux.tam-16 < tam -> aux.tam-16 - tam < 0
+    # if aux.tam-16 < tam goto prox_nodo
     subq $16, %rbx
     jl prox_nodo
 
-    # auxtam >= tam -> aux.tam-16 - tam >= 0
+    # ESPAÇO MAIOR QUE O REQUESITADO
+    # aux.tam >= tam -> aux.tam-16 - tam >= 0
+
+    # Faz o split do nodo, onde o next_nodo é o nodo livre após o novo_nodo
+    # alocado
     # rcx = aux+16+tam
     movq %rax, %rcx
     addq $16, %rcx
@@ -202,18 +214,19 @@ alocaMem:
     movq %rbx, (%rcx)
 
     jmp novo_nodo
-    # -------------- PRIMEIRA ITERAÇÃO, NÃO FUNDE NODOS ---------------
+# -------------- PRIMEIRA ITERAÇÃO, NÃO FUNDE NODOS ---------------
 
 while:
-    # aux.alocado
+    # aux = novo_nodo
+    movq -8(%rbp), %rax
+
+    # if aux.alocado goto prox_nodo
     movq (%rax), %rbx
     cmpq $ALOCADO, %rbx
     je prox_nodo
     
-    # if (!prev.alocado){
-    #   prev.tam = prev.tam + 16 + aux.tam
-    #   aux = prev
-    # }
+inicio_fusao:
+    # if !prev.alocado goto fim_fusao
     movq -24(%rbp), %r8
     movq (%r8), %r9
     cmpq $LIBERADO, %r9
@@ -238,9 +251,12 @@ while:
     movq %r8, %rax
 
 fim_fusao:
+    # Salva novo_nodo apos fusão, aux = novo_nodo = prev
     movq %rax, -8(%rbp)
 
+    # ESPAÇO IGUAL AO REQUESITADO
     # aux.tam == tam -> aux.tam - tam == 0
+    # if aux.tam == tam goto novo_nodo
     movq %rax, %rcx
     addq $8, %rcx 
     movq (%rcx), %rbx
@@ -248,11 +264,17 @@ fim_fusao:
     subq %rdx, %rbx
     jz novo_nodo
 
+    # ESPACO MENOR QUE O REQUESITADO + 16
     # aux.tam-16 < tam -> aux.tam-16 - tam < 0
+    # if aux.tam-16 < tam goto prox_nodo
     subq $16, %rbx
     jl prox_nodo
 
-    # auxtam >= tam -> aux.tam-16 - tam >= 0
+    # ESPAÇO MAIOR QUE O REQUESITADO
+    # aux.tam >= tam -> aux.tam-16 - tam >= 0
+
+    # Faz o split do nodo, onde o next_nodo é o nodo livre após o novo_nodo
+    # alocado
     # rcx = aux+16+tam
     movq %rax, %rcx
     addq $16, %rcx
@@ -318,7 +340,7 @@ liberaMem:
     pushq %rbp
     movq %rsp, %rbp
 
-    # TODO: Verificar se addr é valido
+    # marca como liberada a memoria
     subq $16, %rdi
     movq $LIBERADO, (%rdi)
 

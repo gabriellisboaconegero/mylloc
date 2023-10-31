@@ -1,14 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
+#include "mylloc.h"
 #define TAM 10
-
-extern long int iniciaAlocador();
-extern void *alocaMem(long int tam);
-extern void liberaMem(void *addr);
-extern long int listaNodos();
-extern long int finalizaAlocador();
-extern long int TopoInicialHeap;
-extern long int TopoHeap;
 
 void listaNodosC(){
     listaNodos();
@@ -46,6 +39,7 @@ int main(){
     for (int i = 7; i < TAM; i++)
         a[i] = alocaMemC("aloca 20\n", 20);
     liberaMemC("libera 7 nodo\n", a[7]);
+    liberaMemC("libera 8 nodo\n", a[8]);
     liberaMemC("libera 9 nodo\n", a[9]);
     a[7] = alocaMemC("aloca 112\n", 112);
     a[9] = alocaMemC("aloca 20\n", 20);
