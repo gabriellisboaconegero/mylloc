@@ -1,6 +1,4 @@
 .section .data
-.globl TopoInicialHeap
-.globl TopoHeap
 # ------------------- Variaveis -------------------
     TopoInicialHeap: .quad 0
     TopoHeap: .quad 0
