@@ -25,9 +25,12 @@ prox = %rxx + *(long int *)(%rxx + 8) + 16
 ```
 
 ## A fusão de nodos
-A fusão de nodos funciona da seguinte forma, ele guarda uma variável "prev",
+A fusão de nodos funciona da seguinte forma, ele armazena uma variável "prev",
 que guarda o endereço do nodo anterior, para cada nodo é feita a verificação se
-o nodo está vazio e caso esteja então é feita a verificação se o nodo em "prev"
-está vazio. Se ambos estão vazio então é feita a fusão deles, apenas aumentando
-o tamanho do nodo atual para . Porém o primeiro nodo não tem nodo
-anterior, logo não fazemos a fusão na primeira passada da iteração
+o nodo atual e o nodo anterior (guardado em "prev") são vazios, se ambos estão
+vazio então é feita a fusão deles, apenas aumentando o tamanho do nodo anterior
+para prev.tam + 16 + atual.tam. Após mudar o tamanho, o nodo anterior se torna
+o atual e então são feitas a verificações para alocar o nodo.
+
+O primeiro nodo não tem nodo anterior, logo não fazemos a fusão na primeira 
+passada da iteração.
