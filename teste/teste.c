@@ -41,7 +41,7 @@ int main(){
     liberaMemC("libera 7 nodo\n", a[7]);
     liberaMemC("libera 8 nodo\n", a[8]);
     liberaMemC("libera 9 nodo\n", a[9]);
-    a[7] = alocaMemC("aloca 112\n", 112);
+    a[7] = alocaMemC("aloca 113\n", 113);
     a[9] = alocaMemC("aloca 20\n", 20);
     imprimeMapa();
     fflush(stdout);

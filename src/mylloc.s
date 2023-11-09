@@ -188,14 +188,19 @@ alocaMem:
     subq %rdx, %rbx
     jz set_tamanho
 
-    # ESPACO MENOR QUE O REQUESITADO + 16
-    # aux.tam-16 < tam -> aux.tam-16 - tam < 0
-    # if aux.tam-16 < tam goto prox_nodo
-    subq $16, %rbx
+    # ESPACO MENOR QUE O REQUESITADO
+    # if aux.tam - tam < 0
     jl prox_nodo
 
+    # SEM ESPAÇO PARA SPLIT DE NODO
+    # 0 < if aux.tam - tam < 16
+    # Não pular para set_tamanho pois tem que continuar com o
+    # mesmo tamanho
+    subq $16, %rbx
+    jl set_alocado
+
     # ESPAÇO MAIOR QUE O REQUESITADO
-    # aux.tam >= tam -> aux.tam-16 - tam >= 0
+    # aux.tam >= tam -> aux.tam - 16 - tam >= 0
 
     # Faz o split do nodo, onde o next_nodo é o nodo livre após o novo_nodo
     # alocado
@@ -262,11 +267,16 @@ fim_fusao:
     subq %rdx, %rbx
     jz set_tamanho
 
-    # ESPACO MENOR QUE O REQUESITADO + 16
-    # aux.tam-16 < tam -> aux.tam-16 - tam < 0
-    # if aux.tam-16 < tam goto prox_nodo
-    subq $16, %rbx
+    # ESPACO MENOR QUE O REQUESITADO
+    # if aux.tam - tam < 0
     jl prox_nodo
+
+    # SEM ESPAÇO PARA SPLIT DE NODO
+    # 0 < if aux.tam - tam < 16
+    # Não pular para set_tamanho pois tem que continuar com o
+    # mesmo tamanho
+    subq $16, %rbx
+    jl set_alocado
 
     # ESPAÇO MAIOR QUE O REQUESITADO
     # aux.tam >= tam -> aux.tam-16 - tam >= 0
