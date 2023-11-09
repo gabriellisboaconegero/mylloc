@@ -24,14 +24,14 @@
 .globl finalizaAlocador
 .globl alocaMem
 .globl liberaMem
-.globl listaNodos
+.globl imprimeMapa
 # ------------------- Funções globais -------------------
 
 # ------------------- ListaNodos -------------------
 # cont = -8(%rbp)
 # aux = -16(%rbp)
 # write_char = -24(%rbp)
-listaNodos:
+imprimeMapa:
     pushq %rbp
     movq %rsp, %rbp
     subq $24, %rsp
@@ -180,13 +180,13 @@ alocaMem:
 
     # ESPAÇO IGUAL AO REQUESITADO
     # aux.tam == tam -> aux.tam - tam == 0
-    # if aux.tam == tam goto novo_nodo
+    # if aux.tam == tam goto set_tamanho
     movq %rax, %rcx
     addq $8, %rcx 
     movq (%rcx), %rbx
     movq -16(%rbp), %rdx
     subq %rdx, %rbx
-    jz novo_nodo
+    jz set_tamanho
 
     # ESPACO MENOR QUE O REQUESITADO + 16
     # aux.tam-16 < tam -> aux.tam-16 - tam < 0
@@ -211,7 +211,7 @@ alocaMem:
     addq $8, %rcx
     movq %rbx, (%rcx)
 
-    jmp novo_nodo
+    jmp set_tamanho
 # -------------- PRIMEIRA ITERAÇÃO, NÃO FUNDE NODOS ---------------
 
 while:
@@ -254,13 +254,13 @@ fim_fusao:
 
     # ESPAÇO IGUAL AO REQUESITADO
     # aux.tam == tam -> aux.tam - tam == 0
-    # if aux.tam == tam goto novo_nodo
+    # if aux.tam == tam goto set_tamanho
     movq %rax, %rcx
     addq $8, %rcx 
     movq (%rcx), %rbx
     movq -16(%rbp), %rdx
     subq %rdx, %rbx
-    jz novo_nodo
+    jz set_tamanho
 
     # ESPACO MENOR QUE O REQUESITADO + 16
     # aux.tam-16 < tam -> aux.tam-16 - tam < 0
@@ -285,7 +285,7 @@ fim_fusao:
     addq $8, %rcx
     movq %rbx, (%rcx)
 
-    jmp novo_nodo
+    jmp set_tamanho
 
 prox_nodo:
     # prev = aux
@@ -317,15 +317,17 @@ increase_brk:
     syscall
 
 # requer que novo_nodo {-8(%rbp)} esteja iniciado
-novo_nodo:
+set_tamanho:
     movq -8(%rbp), %rax # novo_nodo.alocado = 1
-    movq $ALOCADO, (%rax)
-    
     addq $8, %rax # novo_nodo.tam = tam
     movq -16(%rbp), %rbx
     movq %rbx, (%rax)
 
-    addq $8, %rax # return novo_nodo.data
+set_alocado:
+    movq -8(%rbp), %rax # novo_nodo.alocado = 1
+    movq $ALOCADO, (%rax)
+
+    addq $GEREN_SIZE, %rax # return novo_nodo.data
 end:
     addq $24, %rsp
     popq %rbp

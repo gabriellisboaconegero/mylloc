@@ -3,8 +3,8 @@
 #include "mylloc.h"
 #define TAM 10
 
-void listaNodosC(){
-    listaNodos();
+void imprimeMapaC(){
+    imprimeMapa();
     printf("\n");
     fflush(stdout);
 }
@@ -13,7 +13,7 @@ void *alocaMemC(char *msg, long int tam){
     void *r = alocaMem(tam);
     printf(msg);
     fflush(stdout);
-    listaNodosC();
+    imprimeMapaC();
     return r;
 }
 
@@ -21,7 +21,7 @@ void liberaMemC(char *msg, void *addr){
     liberaMem(addr);
     printf(msg);
     fflush(stdout);
-    listaNodosC();
+    imprimeMapaC();
 }
 
 int main(){
@@ -43,7 +43,7 @@ int main(){
     liberaMemC("libera 9 nodo\n", a[9]);
     a[7] = alocaMemC("aloca 112\n", 112);
     a[9] = alocaMemC("aloca 20\n", 20);
-    printf("Nodos: %ld\n", listaNodos());
+    imprimeMapa();
     fflush(stdout);
 
     finalizaAlocador();
