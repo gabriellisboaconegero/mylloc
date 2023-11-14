@@ -1,5 +1,6 @@
 .section .data
 # ------------------- Variaveis -------------------
+    # .globl TopoInicialHeap
     TopoInicialHeap: .quad 0
     TopoHeap: .quad 0
     GEREN_STR: .string "################"
@@ -159,6 +160,8 @@ alocaMem:
     movq %rsp, %rbp
     subq $24, %rsp
     movq %rdi, -16(%rbp)   # tam = parametro tam
+    # prev = 0
+    movq $0, -24(%rbp)
 
     # TopoInicialHeap == TopoHeap
     movq TopoInicialHeap, %rax
@@ -224,15 +227,13 @@ while:
     movq -8(%rbp), %rax
 
     # if aux.alocado goto prox_nodo
-    movq (%rax), %rbx
-    cmpq $ALOCADO, %rbx
+    cmpq $ALOCADO, (%rax)
     je prox_nodo
     
 inicio_fusao:
     # if !prev.alocado goto fim_fusao
     movq -24(%rbp), %r8
-    movq (%r8), %r9
-    cmpq $LIBERADO, %r9
+    cmpq $LIBERADO, (%r8)
     jne fim_fusao
 
     # r10 = prev.tam+16
@@ -314,8 +315,18 @@ prox_nodo:
     cmpq %rbx, %rax
     jl while
 
+    # if prev.alocado goto increase_brk
+    movq -24(%rbp), %rax
+    cmpq $ALOCADO, (%rax)
+    je increase_brk
+
+    # Nesse ponto prev.tam < tam e prev.alocado == 1
+    # então podemos aproveitar esse espaço sobrando
+    # Como increase_brk vai pegar o topo e somar 16 + tam, basta voltar
+    # o topo para prev e deixar increase_brk cuidar do resto
+    movq %rax, TopoHeap
+
 increase_brk:
-    # mem vazia
     movq TopoHeap, %rcx # novo_nodo
     movq %rcx, -8(%rbp)
 
@@ -350,10 +361,23 @@ liberaMem:
     pushq %rbp
     movq %rsp, %rbp
 
+    # Verifica se memoria é valida
+    # TopoInicialHeap <= addr < TopoHeap
+    movq $0, %rbx
+    movq TopoInicialHeap, %rax
+    cmpq %rdi, %rax
+    jg end_liberaMem
+    movq TopoHeap, %rax
+    cmpq %rax, %rdi
+    jge end_liberaMem
+
     # marca como liberada a memoria
     subq $16, %rdi
     movq $LIBERADO, (%rdi)
+    movq $1, %rbx
 
+end_liberaMem:
+    movq %rbx, %rax
     popq %rbp
     ret
 # ------------------- LiberaMem -------------------

@@ -11,7 +11,6 @@ FILES.S = $(wildcard $(SRCD)/*.s)
 FILES.C = $(TESTED)/teste.c
 FILES.S.O = $(FILES.S:$(SRCD)/%.s=$(OBJD)/%.o)
 FILES.C.O = $(FILES.C:$(TESTED)/%.c=$(OBJD)/%.o)
-FILES.CS.O = $(FILES.C:$(TESTED)/%.c=$(OBJD)/%.cs.o)
 
 all: $(FILES.S.O) $(FILES.C.O)
 	ld $^ -o $(PROGRAM) $(LDLIBC)
@@ -23,7 +22,8 @@ debug_arch: LDLIBC = -dynamic-linker /lib/ld-linux-x86-64.so.2 /usr/lib/crt1.o /
 debug_arch: debug
 
 debug: ASFLAGS = -g
-debug: $(FILES.S.O) $(FILES.CS.O)
+debug: CFLAGS += -g
+debug: $(FILES.S.O) $(FILES.C.O)
 	ld $^ -o $(PROGRAM) $(LDLIBC)
 
 $(OBJD):
@@ -35,10 +35,6 @@ $(OBJD)/%.o: $(SRCD)/%.s $(INCLUDED)/%.h $(OBJD)
 $(OBJD)/%.o: $(TESTED)/%.c $(OBJD)
 	gcc $(CFLAGS) -c $< -o $@
 
-$(OBJD)/%.cs.o: $(TESTED)/%.c $(OBJD)
-	gcc -S $(CFLAGS) $< -o $<s
-	as $<s -o $@ -g
-
 clean:
-	rm -rf $(OBJD) $(TESTED)/*.cs $(PROGRAM)
+	rm -rf $(OBJD) $(PROGRAM)
 
