@@ -1,6 +1,6 @@
 .section .data
 # ------------------- Variaveis -------------------
-    # .globl TopoInicialHeap
+    .globl TopoInicialHeap
     TopoInicialHeap: .quad 0
     TopoHeap: .quad 0
     GEREN_STR: .string "################"
@@ -27,6 +27,129 @@
 .globl liberaMem
 .globl imprimeMapa
 # ------------------- Funções globais -------------------
+
+# ------------------- Funções locais -------------------
+# addr = %rdi
+get_next_nodo:
+    pushq %rbp
+    movq %rsp, %rbp
+
+    movq %rdi, %rax
+
+    # new_addr = addr + 16 + addr.tam
+    movq %rax, %rdx
+    addq $8, %rdx
+    movq (%rdx), %rdx
+    addq $GEREN_SIZE, %rdx
+    addq %rdx, %rax
+
+    pop %rbp
+    ret
+
+# não precisa fazer verificação se tem pelo menos um nodo pois ela
+# não vai ser chamada se não tiver
+# nodo_atual = -8(%rbp)
+# prox_nodo = -16(%rbp)
+fusiona_nodos:
+    pushq %rbp
+    movq %rsp, %rbp
+    subq $16, %rsp
+
+    # prox_nodo = TopoInicialHeap
+    movq TopoInicialHeap, %rax
+    movq %rax, -16(%rbp)
+
+# loop até achar os nodos_livres
+fusiona_prox_nodo:
+    # nodo_atual = prox_nodo
+    movq -16(%rbp), %rax
+    movq %rax, -8(%rbp)
+
+    # prox_nodo = get_prox_nodo(nodo_atual)
+    movq %rax, %rdi
+    call get_next_nodo
+    movq %rax, -16(%rbp)
+    
+    # nodo_atual
+    movq -8(%rbp), %rbx
+    
+    # if prox_nodo => TopoHeap goto end_fusiona_nodos
+    movq TopoHeap, %rcx
+    cmpq %rcx, %rax
+    jge end_fusiona_nodos
+
+    # if nodo_atual.alocado goto fusiona_prox_nodo
+    cmpq $ALOCADO, (%rbx)
+    je fusiona_prox_nodo
+
+    # if prox_nodo.alocado goto fusiona_prox_nodo
+    cmpq $ALOCADO, (%rax)
+    je fusiona_prox_nodo
+
+    # rdx = nodo_atual.tam
+    # rcx = &(nodo_atual.tam)
+    movq %rbx, %rcx
+    addq $8, %rcx
+    movq (%rcx), %rdx
+
+    # r8 = prox_nodo.tam
+    movq %rax, %r8
+    addq $8, %r8
+    movq (%r8), %r8
+
+    # rdx = nodo_atual.tam + prox_nodo.tam + 16
+    addq $GEREN_SIZE, %rdx
+    addq %r8, %rdx
+
+    # nodo_atual.tam = nodo_atual.tam + prox_nodo.tam + 16
+    movq %rdx, (%rcx)
+
+# ------------ Verifica se prox nodo tambem é livre --------------
+    # prox_nodo = get_prox_nodo(nodo_atual)
+    movq -8(%rbp), %rdi
+    call get_next_nodo
+    movq %rax, -16(%rbp)
+    
+    # nodo_atual
+    movq -8(%rbp), %rbx
+    
+    # if prox_nodo => TopoHeap goto end_fusiona_nodos
+    movq TopoHeap, %rcx
+    cmpq %rcx, %rax
+    jge end_fusiona_nodos
+
+    # Ja sei que nodo_atual não esta alocado
+    # if nodo_atual.alocado goto fusiona_prox_nodo
+    # cmpq $ALOCADO, (%rbx)
+    # je fusiona_prox_nodo
+
+    # if prox_nodo.alocado goto fusiona_prox_nodo
+    cmpq $ALOCADO, (%rax)
+    je end_fusiona_nodos
+
+    # rdx = nodo_atual.tam
+    # rcx = &(nodo_atual.tam)
+    movq %rbx, %rcx
+    addq $8, %rcx
+    movq (%rcx), %rdx
+
+    # r8 = prox_nodo.tam
+    movq %rax, %r8
+    addq $8, %r8
+    movq (%r8), %r8
+
+    # rdx = nodo_atual.tam + prox_nodo.tam + 16
+    addq $GEREN_SIZE, %rdx
+    addq %r8, %rdx
+
+    # nodo_atual.tam = nodo_atual.tam + prox_nodo.tam + 16
+    movq %rdx, (%rcx)
+
+end_fusiona_nodos:
+    addq $16, %rsp
+    pop %rbp
+    ret
+# ------------------- Funções locais -------------------
 
 # ------------------- ListaNodos -------------------
 # cont = -8(%rbp)
@@ -154,12 +277,12 @@ end_iniciaAlocador:
 # tam = %rdi = -16(%rbp)
 # prev = %r8 = -24(%rbp)
 # aux = %rax
-# TODO: Fazer o prox_nodo antes do while
 alocaMem:
     pushq %rbp
     movq %rsp, %rbp
     subq $24, %rsp
-    movq %rdi, -16(%rbp)   # tam = parametro tam
+    # tam = parametro tam
+    movq %rdi, -16(%rbp)
     # prev = 0
     movq $0, -24(%rbp)
 
@@ -171,56 +294,6 @@ alocaMem:
 
     # novo_nodo = TopoInicialHeap
     movq %rax, -8(%rbp)
-# -------------- PRIMEIRA ITERAÇÃO, NÃO FUNDE NODOS ---------------
-    # prev = TopoInicialHeap
-    movq %rax, %r8
-    movq %r8, -24(%rbp)
-
-    # if aux.alocado goto prox_nodo
-    movq (%rax), %rbx
-    cmpq $ALOCADO, %rbx
-    je prox_nodo
-
-    # ESPAÇO IGUAL AO REQUESITADO
-    # aux.tam == tam -> aux.tam - tam == 0
-    # if aux.tam == tam goto set_tamanho
-    movq %rax, %rcx
-    addq $8, %rcx 
-    movq (%rcx), %rbx
-    movq -16(%rbp), %rdx
-    subq %rdx, %rbx
-    jz set_tamanho
-
-    # ESPACO MENOR QUE O REQUESITADO
-    # if aux.tam - tam < 0
-    jl prox_nodo
-
-    # SEM ESPAÇO PARA SPLIT DE NODO
-    # 0 < if aux.tam - tam < 16
-    # Não pular para set_tamanho pois tem que continuar com o
-    # mesmo tamanho
-    subq $16, %rbx
-    jl set_alocado
-
-    # ESPAÇO MAIOR QUE O REQUESITADO
-    # aux.tam >= tam -> aux.tam - 16 - tam >= 0
-
-    # Faz o split do nodo, onde o next_nodo é o nodo livre após o novo_nodo
-    # alocado
-    # rcx = aux+16+tam
-    movq %rax, %rcx
-    addq $16, %rcx
-    addq %rdx, %rcx
-
-    # next_nodo.alocado = 0
-    movq $LIBERADO, (%rcx)
-
-    # next_nodo.tam = next_tam
-    addq $8, %rcx
-    movq %rbx, (%rcx)
-
-    jmp set_tamanho
-# -------------- PRIMEIRA ITERAÇÃO, NÃO FUNDE NODOS ---------------
 
 while:
     # aux = novo_nodo
@@ -229,34 +302,6 @@ while:
     # if aux.alocado goto prox_nodo
     cmpq $ALOCADO, (%rax)
     je prox_nodo
-    
-inicio_fusao:
-    # if !prev.alocado goto fim_fusao
-    movq -24(%rbp), %r8
-    cmpq $LIBERADO, (%r8)
-    jne fim_fusao
-
-    # r10 = prev.tam+16
-    movq %r8, %r9
-    addq $8, %r9
-    movq (%r9), %r10
-    addq $16, %r10
-
-    # r11 = aux.tam
-    movq %rax, %r11
-    addq $8, %r11
-    movq (%r11), %r11
-
-    # r11 = prev.tam + 16 + aux.tam
-    addq %r10, %r11
-    movq %r11, (%r9)
-
-    # aux = prev
-    movq %r8, %rax
-
-fim_fusao:
-    # Salva novo_nodo apos fusão, aux = novo_nodo = prev
-    movq %rax, -8(%rbp)
 
     # ESPAÇO IGUAL AO REQUESITADO
     # aux.tam == tam -> aux.tam - tam == 0
@@ -276,7 +321,7 @@ fim_fusao:
     # 0 < if aux.tam - tam < 16
     # Não pular para set_tamanho pois tem que continuar com o
     # mesmo tamanho
-    subq $16, %rbx
+    subq $GEREN_SIZE, %rbx
     jl set_alocado
 
     # ESPAÇO MAIOR QUE O REQUESITADO
@@ -286,7 +331,7 @@ fim_fusao:
     # alocado
     # rcx = aux+16+tam
     movq %rax, %rcx
-    addq $16, %rcx
+    addq $GEREN_SIZE, %rcx
     addq %rdx, %rcx
 
     # next_nodo.alocado = 0
@@ -302,12 +347,9 @@ prox_nodo:
     # prev = aux
     movq %rax, -24(%rbp)
 
-    # aux+aux->tam+16
-    movq %rax, %rdx
-    addq $8, %rdx
-    movq (%rdx), %rdx
-    addq $16, %rdx
-    addq %rdx, %rax
+    # aux = get_prox_nodo
+    movq %rax, %rdi
+    call get_next_nodo
     movq %rax, -8(%rbp) # nodo_novo = aux
 
     # aux >= TopoHeap
@@ -330,8 +372,9 @@ increase_brk:
     movq TopoHeap, %rcx # novo_nodo
     movq %rcx, -8(%rbp)
 
+    movq -16(%rbp), %rdi
     # TopoHeap += 16 + tam
-    addq $16, %rdi
+    addq $GEREN_SIZE, %rdi
     addq TopoHeap, %rdi
     movq %rdi, TopoHeap
     movq $BRK_SERVICE, %rax
@@ -360,10 +403,17 @@ end:
 liberaMem:
     pushq %rbp
     movq %rsp, %rbp
+    # Valor de retorno
+    movq $0, %rbx
+
+    # if TopoInicialHeap == TopoHeap goto end_liberaMem
+    movq TopoInicialHeap, %rax
+    movq TopoHeap, %rcx
+    cmpq %rax, %rcx
+    je end_liberaMem
 
     # Verifica se memoria é valida
-    # TopoInicialHeap <= addr < TopoHeap
-    movq $0, %rbx
+    # if !(TopoInicialHeap <= addr < TopoHeap) goto end_liberaMem
     movq TopoInicialHeap, %rax
     cmpq %rdi, %rax
     jg end_liberaMem
@@ -372,9 +422,13 @@ liberaMem:
     jge end_liberaMem
 
     # marca como liberada a memoria
-    subq $16, %rdi
+    subq $GEREN_SIZE, %rdi
     movq $LIBERADO, (%rdi)
     movq $1, %rbx
+
+    pushq %rbx
+    call fusiona_nodos   
+    popq %rbx
 
 end_liberaMem:
     movq %rbx, %rax
