@@ -46,10 +46,35 @@ get_next_nodo:
     pop %rbp
     ret
 
+# fusiona nodos livres na e nb
+# nodo_atual = %rdi
+# prox_nodo = %rsi
+fusiona:
+    pushq %rbp
+    movq %rsp, %rbp
+    # rdx = nodo_atual.tam
+    # rdi = &(nodo_atual.tam)
+    addq $8, %rdi
+    movq (%rdi), %rdx
+
+    # rsi = prox_nodo.tam
+    addq $8, %rsi
+    movq (%rsi), %rsi
+
+    # rdx = nodo_atual.tam + prox_nodo.tam + 16
+    addq $GEREN_SIZE, %rdx
+    addq %rsi, %rdx
+
+    # nodo_atual.tam = nodo_atual.tam + prox_nodo.tam + 16
+    movq %rdx, (%rdi)
+
+    popq %rbp
+    ret
+
 # não precisa fazer verificação se tem pelo menos um nodo pois ela
 # não vai ser chamada se não tiver
-# nodo_atual = -8(%rbp)
-# prox_nodo = -16(%rbp)
+# nodo_atual = rbx = -8(%rbp)
+# prox_nodo = rax = -16(%rbp)
 fusiona_nodos:
     pushq %rbp
     movq %rsp, %rbp
@@ -86,23 +111,9 @@ fusiona_prox_nodo:
     cmpq $ALOCADO, (%rax)
     je fusiona_prox_nodo
 
-    # rdx = nodo_atual.tam
-    # rcx = &(nodo_atual.tam)
-    movq %rbx, %rcx
-    addq $8, %rcx
-    movq (%rcx), %rdx
-
-    # r8 = prox_nodo.tam
-    movq %rax, %r8
-    addq $8, %r8
-    movq (%r8), %r8
-
-    # rdx = nodo_atual.tam + prox_nodo.tam + 16
-    addq $GEREN_SIZE, %rdx
-    addq %r8, %rdx
-
-    # nodo_atual.tam = nodo_atual.tam + prox_nodo.tam + 16
-    movq %rdx, (%rcx)
+    movq %rbx, %rdi
+    movq %rax, %rsi
+    call fusiona
 
 # ------------ Verifica se prox nodo tambem é livre --------------
     # prox_nodo = get_prox_nodo(nodo_atual)
@@ -127,23 +138,9 @@ fusiona_prox_nodo:
     cmpq $ALOCADO, (%rax)
     je end_fusiona_nodos
 
-    # rdx = nodo_atual.tam
-    # rcx = &(nodo_atual.tam)
-    movq %rbx, %rcx
-    addq $8, %rcx
-    movq (%rcx), %rdx
-
-    # r8 = prox_nodo.tam
-    movq %rax, %r8
-    addq $8, %r8
-    movq (%r8), %r8
-
-    # rdx = nodo_atual.tam + prox_nodo.tam + 16
-    addq $GEREN_SIZE, %rdx
-    addq %r8, %rdx
-
-    # nodo_atual.tam = nodo_atual.tam + prox_nodo.tam + 16
-    movq %rdx, (%rcx)
+    movq %rbx, %rdi
+    movq %rax, %rsi
+    call fusiona
 
 end_fusiona_nodos:
     addq $16, %rsp
@@ -162,8 +159,8 @@ imprimeMapa:
     movq $0, -8(%rbp)
 
     movq TopoInicialHeap, %rax
-    movq %rax, -16(%rbp)
 while2:
+    movq %rax, -16(%rbp)
     # aux >= TopoHeap
     movq TopoHeap, %rbx
     cmpq %rbx, %rax
@@ -187,7 +184,6 @@ livre_select:
     jmp fim_select
 alocado_select:
     movq $ALOC_CHAR, %r8
-
 fim_select:
     movq %r8, -24(%rbp)
 
@@ -219,12 +215,8 @@ fim_print_aloc_state_loop:
     movq %rcx, -8(%rbp)
 
     # aux = aux+aux->tam+16
-    movq -16(%rbp), %rdx
-    movq %rdx, %rax
-    addq $8, %rdx
-    movq (%rdx), %rdx
-    addq $16, %rdx
-    addq %rdx, %rax
+    movq -16(%rbp), %rdi
+    call get_next_nodo
     movq %rax, -16(%rbp)
 
     jmp while2
