@@ -79,6 +79,8 @@ fusiona_nodos:
     pushq %rbp
     movq %rsp, %rbp
     subq $16, %rsp
+    # calle-save rbx
+    pushq %rbx
 
     # prox_nodo = TopoInicialHeap
     movq TopoInicialHeap, %rax
@@ -143,6 +145,8 @@ fusiona_prox_nodo:
     call fusiona
 
 end_fusiona_nodos:
+    # calle-save rbx
+    popq %rbx
     addq $16, %rsp
     pop %rbp
     ret
@@ -156,6 +160,10 @@ imprimeMapa:
     pushq %rbp
     movq %rsp, %rbp
     subq $24, %rsp
+    # calle-save rbx
+    pushq %rbx
+    
+    # cont = 0
     movq $0, -8(%rbp)
 
     movq TopoInicialHeap, %rax
@@ -230,6 +238,8 @@ fim_while2:
     syscall
 
     movq -8(%rbp), %rax # return cont
+    # calle-save rbx
+    popq %rbx
     addq $24, %rsp
     popq %rbp
     ret
@@ -273,6 +283,9 @@ alocaMem:
     pushq %rbp
     movq %rsp, %rbp
     subq $24, %rsp
+    # calle-save rbx
+    pushq %rbx
+
     # tam = parametro tam
     movq %rdi, -16(%rbp)
     # prev = 0
@@ -385,6 +398,8 @@ set_alocado:
 
     addq $GEREN_SIZE, %rax # return novo_nodo.data
 end:
+    # calle-save rbx
+    popq %rbx
     addq $24, %rsp
     popq %rbp
     ret
@@ -395,6 +410,7 @@ end:
 liberaMem:
     pushq %rbp
     movq %rsp, %rbp
+    pushq %rbx
     # Valor de retorno
     movq $0, %rbx
 
@@ -418,12 +434,13 @@ liberaMem:
     movq $LIBERADO, (%rdi)
     movq $1, %rbx
 
-    pushq %rbx
     call fusiona_nodos   
-    popq %rbx
 
 end_liberaMem:
+    # reutiliza rbx pois é calle save
     movq %rbx, %rax
+
+    popq %rbx
     popq %rbp
     ret
 # ------------------- LiberaMem -------------------
