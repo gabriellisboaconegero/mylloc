@@ -10,11 +10,11 @@ int main (long int argc, char** argv) {
 
   a=(void *) alocaMem(100);
   imprimeMapa();
-  b=(void *) alocaMem(130);
+  b=(void *) alocaMem(110);
   imprimeMapa();
   c=(void *) alocaMem(120);
   imprimeMapa();
-  d=(void *) alocaMem(110);
+  d=(void *) alocaMem(130);
   imprimeMapa();
   // 1) Espero ver quatro segmentos ocupados
 
