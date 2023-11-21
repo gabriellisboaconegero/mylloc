@@ -6,4 +6,18 @@ bibliotecas linux (crt1, ld, etc.) estão em outro lugar e demorei para
 descobrir onde estavam.
 
 # Pergunta 2
-Em relação as aulas
+Em relação as aulas não mudaria nada, foram muito bem explicadas e quando
+tinha dúvidas elas foram respondidas com excelência e clareza. Mudaria apenas
+o enunciado do trabalho, muitas pessoas que conversei ficaram em dúvida de como
+implementar a fusão, na liberação ou alocação. Por mais que o professor fale que
+não tem problema fazer das duas formas mas tem que avisar e explicar como fez na
+alocação alguns ficaram com medo de perder nota e refizeram.
+
+# Pergunta 3
+As alterações principais foram dentro do while. Anteriormente ele servia para achar
+o primeiro nodo que acomode o tamanho requisitado e já fazia a lógica de alocar e fazer
+split Agora ele serve apenas para achar o maior nodo livre, e tem um outro label (aloca_maior)
+que faz essa parte. Antes tinham apenas duas variáveis e agora uma terceira foi colocada, a variável
+maior, ela começa como NULL e é atualizada quando um novo nodo livre e maior que ela é encontrado.
+Optei por começar com NULL pois assim poderia verificar na hora de alocar_maior se era NULL, se fosse
+então quer dizer que não tinha nenhum nodo livre e então tem que aumentar a brk.

@@ -1,0 +1,8 @@
+Não foram encontrados nenhum problema.
+
+ALERTA: Como o alocador altera a brk então usar procedimentos
+que utiliem outro alocador podem causar ações imprevisíveis.
+
+EXEMPLO: Usar printf depois de inciar alocador, por ele aloca
+um buffer e ao finalizar alocador e o programa terminar vai ter
+uma falha de segmentação.
