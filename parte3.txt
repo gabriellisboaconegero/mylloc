@@ -1,0 +1,9 @@
+# Pergunta 1
+Eu diria para não tentar pensar na melhor forma possível. Apenas
+fazer o que estava no enunciado, seguir a intuição. Dessa forma teria
+aproveitado mais o trabalho. Também diria para não fazer em arch linux, as
+bibliotecas linux (crt1, ld, etc.) estão em outro lugar e demorei para
+descobrir onde estavam.
+
+# Pergunta 2
+Em relação as aulas

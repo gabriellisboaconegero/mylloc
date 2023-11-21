@@ -1,4 +1,4 @@
-PROGRAM = main
+PROGRAM = avalia
 SRCD=src
 INCLUDED=include
 TESTED=teste
@@ -8,7 +8,7 @@ LDLIBC = -dynamic-linker /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 /usr/lib/x86
 CFLAGS= -Wall -I$(INCLUDED)
 
 FILES.S = $(wildcard $(SRCD)/*.s)
-FILES.C = $(TESTED)/teste.c
+FILES.C = $(TESTED)/avalia.c
 FILES.S.O = $(FILES.S:$(SRCD)/%.s=$(OBJD)/%.o)
 FILES.C.O = $(FILES.C:$(TESTED)/%.c=$(OBJD)/%.o)
 

@@ -1,6 +1,6 @@
 .section .data
 # ------------------- Variaveis -------------------
-    .globl TopoInicialHeap
+    # .globl TopoInicialHeap
     TopoInicialHeap: .quad 0
     TopoHeap: .quad 0
     GEREN_STR: .string "################"
@@ -15,6 +15,7 @@
 .equ BRK_SERVICE, 12
 .equ WRITE_SERVICE, 1
 .equ GET_BRK,  0
+.equ NULL,  0
 .equ STDOUT, 1
 .equ GEREN_SIZE, 16
 # ------------------- Constantes -------------------
@@ -275,9 +276,9 @@ end_iniciaAlocador:
 #     long int tam = base+8
 #     void *data = base+16
 # }
-# novo_nodo = -8(%rbp)
+# maior = -8(%rbp)
 # tam = %rdi = -16(%rbp)
-# prev = %r8 = -24(%rbp)
+# next_nodo = -24(%rbp)
 # aux = %rax
 alocaMem:
     pushq %rbp
@@ -286,10 +287,11 @@ alocaMem:
     # calle-save rbx
     pushq %rbx
 
+    # maior = NULL
+    movq $NULL, -8(%rbp)
+
     # tam = parametro tam
     movq %rdi, -16(%rbp)
-    # prev = 0
-    movq $0, -24(%rbp)
 
     # TopoInicialHeap == TopoHeap
     movq TopoInicialHeap, %rax
@@ -297,20 +299,57 @@ alocaMem:
     cmpq %rax, %rbx
     je increase_brk
 
-    # novo_nodo = TopoInicialHeap
-    movq %rax, -8(%rbp)
-
+    # next_nodo = TopoInicialHeap
+    movq %rax, -24(%rbp)
 while:
-    # aux = novo_nodo
-    movq -8(%rbp), %rax
+    # aux = next_nodo
+    movq -24(%rbp), %rax
 
     # if aux.alocado goto prox_nodo
     cmpq $ALOCADO, (%rax)
     je prox_nodo
 
+    # if maior == NULL then goto set_maior
+    movq -8(%rbp), %rbx
+    cmpq $NULL, %rbx
+    je set_maior
+
+    # if maior.tam > aux.tam then goto prox_nodo
+    # rcx = maior.tam
+    movq %rbx, %rcx
+    addq $8, %rcx
+    movq (%rcx), %rcx
+    # rdx = aux.tam
+    movq %rax, %rdx
+    addq $8, %rdx
+    movq (%rdx), %rdx
+
+    cmpq %rdx, %rcx
+    jg prox_nodo
+
+set_maior:
+    movq %rax, -8(%rbp)
+
+prox_nodo:
+    # aux = get_prox_nodo
+    movq %rax, %rdi
+    call get_next_nodo
+    movq %rax, -24(%rbp) # nodo_novo = aux
+
+    # aux >= TopoHeap
+    movq TopoHeap, %rbx
+    cmpq %rbx, %rax
+    jl while
+
+aloca_maior:
+    # if maior == NULL goto set_tamanho
+    movq -8(%rbp), %rax
+    cmpq $NULL, %rax
+    je increase_brk
+
     # ESPAÇO IGUAL AO REQUESITADO
-    # aux.tam == tam -> aux.tam - tam == 0
-    # if aux.tam == tam goto set_tamanho
+    # maior.tam == tam -> maior.tam - tam == 0
+    # if maior.tam == tam goto set_tamanho
     movq %rax, %rcx
     addq $8, %rcx 
     movq (%rcx), %rbx
@@ -319,11 +358,11 @@ while:
     jz set_tamanho
 
     # ESPACO MENOR QUE O REQUESITADO
-    # if aux.tam - tam < 0
-    jl prox_nodo
+    # if maior.tam - tam < 0
+    jl increase_brk
 
     # SEM ESPAÇO PARA SPLIT DE NODO
-    # 0 < if aux.tam - tam < 16
+    # 0 < if maior.tam - tam < 16
     # Não pular para set_tamanho pois tem que continuar com o
     # mesmo tamanho
     subq $GEREN_SIZE, %rbx
@@ -348,33 +387,9 @@ while:
 
     jmp set_tamanho
 
-prox_nodo:
-    # prev = aux
-    movq %rax, -24(%rbp)
-
-    # aux = get_prox_nodo
-    movq %rax, %rdi
-    call get_next_nodo
-    movq %rax, -8(%rbp) # nodo_novo = aux
-
-    # aux >= TopoHeap
-    movq TopoHeap, %rbx
-    cmpq %rbx, %rax
-    jl while
-
-    # if prev.alocado goto increase_brk
-    movq -24(%rbp), %rax
-    cmpq $ALOCADO, (%rax)
-    je increase_brk
-
-    # Nesse ponto prev.tam < tam e prev.alocado == 1
-    # então podemos aproveitar esse espaço sobrando
-    # Como increase_brk vai pegar o topo e somar 16 + tam, basta voltar
-    # o topo para prev e deixar increase_brk cuidar do resto
-    movq %rax, TopoHeap
-
 increase_brk:
-    movq TopoHeap, %rcx # novo_nodo
+    # maior = TopoHeap
+    movq TopoHeap, %rcx
     movq %rcx, -8(%rbp)
 
     movq -16(%rbp), %rdi
@@ -385,18 +400,21 @@ increase_brk:
     movq $BRK_SERVICE, %rax
     syscall
 
-# requer que novo_nodo {-8(%rbp)} esteja iniciado
+# requer que maior {-8(%rbp)} esteja iniciado
 set_tamanho:
-    movq -8(%rbp), %rax # novo_nodo.alocado = 1
-    addq $8, %rax # novo_nodo.tam = tam
+    # maior.tam = tam
+    movq -8(%rbp), %rax
+    addq $8, %rax
     movq -16(%rbp), %rbx
     movq %rbx, (%rax)
 
 set_alocado:
-    movq -8(%rbp), %rax # novo_nodo.alocado = 1
+    # maior.alocado = 1
+    movq -8(%rbp), %rax
     movq $ALOCADO, (%rax)
 
-    addq $GEREN_SIZE, %rax # return novo_nodo.data
+    # return maior.data
+    addq $GEREN_SIZE, %rax
 end:
     # calle-save rbx
     popq %rbx
